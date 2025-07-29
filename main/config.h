@@ -9,11 +9,11 @@
 #include <Arduino.h>
 
 // Debug level setting
-#define DEBUG_LEVEL 1  // 0=Off, 1=Basic, 2=Verbose
+#define DEBUG_LEVEL 0  // 0=Off, 1=Basic, 2=Verbose
 
 // Version Information
-#define DEVICE_VERSION "1.0.0"
-#define DEVICE_MANUFACTURER "SmartC Observatory"
+#define DEVICE_VERSION "1.0.1"
+#define DEVICE_MANUFACTURER "Corey Smart"
 #define DEVICE_NAME "ESP32 Flat Panel Calibrator"
 
 // GPIO pin definitions

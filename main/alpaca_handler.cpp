@@ -195,27 +195,31 @@ bool validateBooleanParameter(const String& paramName, bool& result) {
 
 // Management API handlers
 void handleAPIVersions() {
-  DynamicJsonDocument doc(64);
-  JsonArray array = doc.to<JsonArray>();
+  int clientID = getClientID();
+  int clientTransactionID = getClientTransactionID();
+  
+  DynamicJsonDocument valueDoc(64);
+  JsonArray array = valueDoc.to<JsonArray>();
   array.add(1);
   
-  String response;
-  serializeJson(doc, response);
-  alpacaServer.send(200, "application/json", response);
+  String value;
+  serializeJson(valueDoc, value);
+  
+  sendAlpacaResponse(clientID, clientTransactionID, 0, "", value);
 }
 
 void handleDescription() {
   int clientID = getClientID();
   int clientTransactionID = getClientTransactionID();
   
-  DynamicJsonDocument doc(256);
-  doc["ServerName"] = DEVICE_NAME;
-  doc["Manufacturer"] = DEVICE_MANUFACTURER;
-  doc["ManufacturerVersion"] = DEVICE_VERSION;
-  doc["Location"] = "Observatory";
+  DynamicJsonDocument valueDoc(256);
+  valueDoc["ServerName"] = DEVICE_NAME;
+  valueDoc["Manufacturer"] = DEVICE_MANUFACTURER;
+  valueDoc["ManufacturerVersion"] = DEVICE_VERSION;
+  valueDoc["Location"] = "Observatory";
   
   String value;
-  serializeJson(doc, value);
+  serializeJson(valueDoc, value);
   
   sendAlpacaResponse(clientID, clientTransactionID, 0, "", value);
 }
@@ -224,8 +228,8 @@ void handleConfiguredDevices() {
   int clientID = getClientID();
   int clientTransactionID = getClientTransactionID();
   
-  DynamicJsonDocument arrayDoc(256);
-  JsonArray array = arrayDoc.to<JsonArray>();
+  DynamicJsonDocument valueDoc(256);
+  JsonArray array = valueDoc.to<JsonArray>();
   
   JsonObject device = array.createNestedObject();
   device["DeviceName"] = deviceName;
@@ -234,7 +238,7 @@ void handleConfiguredDevices() {
   device["UniqueID"] = uniqueID;
   
   String value;
-  serializeJson(array, value);
+  serializeJson(valueDoc, value);
   
   sendAlpacaResponse(clientID, clientTransactionID, 0, "", value);
 }
@@ -251,6 +255,18 @@ void handleSetConnected() {
   int clientID = getClientID();
   int clientTransactionID = getClientTransactionID();
   
+  for (int i = 0; i < alpacaServer.args(); i++) {
+    String argName = alpacaServer.argName(i);
+    if (argName.equalsIgnoreCase("ClientID") || 
+        argName.equalsIgnoreCase("ClientTransactionID")) {
+      continue;
+    }
+    if (argName.equalsIgnoreCase("connected") && argName != "Connected") {
+      alpacaServer.send(400, "text/plain", "Invalid parameter casing - use 'Connected'");
+      return;
+    }
+  }
+
   // FIXED: Strict parameter validation
   bool connected;
   if (!validateBooleanParameter("Connected", connected)) {
@@ -383,7 +399,8 @@ void handleCalibratorOn() {
     return;
   }
   
-  // FIXED: Strict parameter validation - check ALL argument names for correct casing
+  // FIXED: Check only for brightness parameter with wrong casing
+  // Per Postel's Law, ignore extra parameters but validate known ones strictly
   for (int i = 0; i < alpacaServer.args(); i++) {
     String argName = alpacaServer.argName(i);
     
@@ -399,11 +416,7 @@ void handleCalibratorOn() {
       return;
     }
     
-    // Reject any other unrecognized parameters
-    if (argName != "Brightness") {
-      alpacaServer.send(400, "text/plain", "Invalid parameter: " + argName);
-      return;
-    }
+    // Ignore all other parameters (following Postel's Law)
   }
   
   // Check for correct brightness parameter
@@ -462,6 +475,16 @@ void handleCalibratorOff() {
     return;
   }
   
+  // Validate parameter casing - CalibratorOff takes no parameters except ClientID/ClientTransactionID
+  for (int i = 0; i < alpacaServer.args(); i++) {
+    String argName = alpacaServer.argName(i);
+    if (argName.equalsIgnoreCase("ClientID") || 
+        argName.equalsIgnoreCase("ClientTransactionID")) {
+      continue;
+    }
+    // CalibratorOff takes no other parameters - ignore extra params per Postel's Law
+  }
+  
   if (turnCalibratorOff()) {
     sendAlpacaResponse(clientID, clientTransactionID, 0, "", "");
   } else {
@@ -474,6 +497,17 @@ void handleOpenCover() {
   int clientID = getClientID();
   int clientTransactionID = getClientTransactionID();
   
+  // Validate parameter casing first, even though method isn't implemented
+  for (int i = 0; i < alpacaServer.args(); i++) {
+    String argName = alpacaServer.argName(i);
+    if (argName.equalsIgnoreCase("ClientID") || 
+        argName.equalsIgnoreCase("ClientTransactionID")) {
+      continue;
+    }
+    // OpenCover takes no other parameters, but validate case if any are provided
+    // (Following Postel's Law - ignore extra params but validate known ones)
+  }
+  
   sendAlpacaResponse(clientID, clientTransactionID, ASCOM_ERROR_NOT_IMPLEMENTED, "Cover control not implemented", "");
 }
 
@@ -481,12 +515,32 @@ void handleCloseCover() {
   int clientID = getClientID();
   int clientTransactionID = getClientTransactionID();
   
+  // Validate parameter casing first, even though method isn't implemented
+  for (int i = 0; i < alpacaServer.args(); i++) {
+    String argName = alpacaServer.argName(i);
+    if (argName.equalsIgnoreCase("ClientID") || 
+        argName.equalsIgnoreCase("ClientTransactionID")) {
+      continue;
+    }
+    // CloseCover takes no other parameters, but validate case if any are provided
+  }
+  
   sendAlpacaResponse(clientID, clientTransactionID, ASCOM_ERROR_NOT_IMPLEMENTED, "Cover control not implemented", "");
 }
 
 void handleHaltCover() {
   int clientID = getClientID();
   int clientTransactionID = getClientTransactionID();
+  
+  // Validate parameter casing first, even though method isn't implemented
+  for (int i = 0; i < alpacaServer.args(); i++) {
+    String argName = alpacaServer.argName(i);
+    if (argName.equalsIgnoreCase("ClientID") || 
+        argName.equalsIgnoreCase("ClientTransactionID")) {
+      continue;
+    }
+    // HaltCover takes no other parameters, but validate case if any are provided
+  }
   
   sendAlpacaResponse(clientID, clientTransactionID, ASCOM_ERROR_NOT_IMPLEMENTED, "Cover control not implemented", "");
 }
