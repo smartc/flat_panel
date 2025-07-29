@@ -5,5 +5,5 @@
 
 #include "Debug.h"
 
-// Instantiate the global Debug object
+// Create the global Debug instance
 DebugClass Debug;

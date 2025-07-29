@@ -10,28 +10,25 @@
 #include <WiFiUdp.h>
 #include "config.h"
 
-// External server instance
+// External references
 extern WebServer alpacaServer;
 extern WiFiUDP udp;
 extern String uniqueID;
 extern unsigned int serverTransactionID;
 
-// Function prototypes
+// Function prototypes for setup and handling
 void setupAlpacaAPI();
-void handleAlpacaDiscovery();
 void setupAlpacaRoutes();
-void sendAlpacaResponse(int clientID, int clientTransactionID, int errorNumber, String errorMessage, String value = "");
+void handleAlpacaDiscovery();
+void handleAlpacaAPI();
+void sendAlpacaResponse(int clientID, int clientTransactionID, int errorNumber, const String& errorMessage, const String& value);
 
 // Management API handlers
-void handleApiVersions();
+void handleAPIVersions();
 void handleDescription();
 void handleConfiguredDevices();
 
-// Setup web interface handlers
-void handleCoverCalibratorSetup();
-void handleRedirectSetup();
-
-// ASCOM Alpaca Common handlers
+// Common device property handlers
 void handleConnected();
 void handleSetConnected();
 void handleDeviceDescription();
@@ -42,20 +39,21 @@ void handleName();
 void handleSupportedActions();
 void handleAction();
 
-// Handle methods that are not implemented
-void handleNotFound();
-void handleNotImplemented();
-
-// CoverCalibrator specific handlers
+// CoverCalibrator property handlers
 void handleBrightness();
-void handleSetBrightness();
-void handleMaxBrightness();
 void handleCalibratorState();
 void handleCoverState();
+void handleMaxBrightness();
+
+// CoverCalibrator control handlers
 void handleCalibratorOn();
 void handleCalibratorOff();
 void handleOpenCover();
 void handleCloseCover();
 void handleHaltCover();
+
+// Setup handlers
+void handleSetupRedirect();
+void handleCoverCalibratorSetup();
 
 #endif // ALPACA_HANDLER_H

@@ -1,6 +1,6 @@
 /*
  * ESP32 ASCOM Alpaca Flat Panel Calibrator
- * Configuration Header File
+ * Configuration Header File - UPDATED WITH 10-BIT PWM RESOLUTION
  */
 
 #ifndef CONFIG_H
@@ -19,10 +19,10 @@
 // GPIO pin definitions
 const int PWM_OUTPUT_PIN = 4;           // PWM output for LED panel brightness
 
-// PWM settings - Changed from 12-bit to 10-bit resolution
+// PWM settings - CHANGED FROM 12-bit to 10-bit resolution as requested
 const int PWM_FREQUENCY = 1000;         // 1 kHz frequency
-const int PWM_RESOLUTION = 10;          // 10-bit resolution (0-1023)
-const int MAX_PWM_VALUE = 1023;         // 2^10 - 1
+const int PWM_RESOLUTION = 10;          // 10-bit resolution (0-1023) - CHANGED FROM 12
+const int MAX_PWM_VALUE = 1023;         // 2^10 - 1 (CHANGED FROM 4095)
 const int MIN_PWM_VALUE = 0;            // Minimum PWM value
 
 // Calibrator brightness settings
@@ -65,31 +65,21 @@ inline const char* ALPACA_DISCOVERY_MESSAGE = "alpacadiscovery1";
 // Enum for calibrator status - matches ASCOM CalibratorStatus values
 enum CalibratorStatus {
   CALIBRATOR_NOT_PRESENT = 0,           // Device does not have a calibrator
-  CALIBRATOR_OFF = 1,                   // Calibrator is off
-  CALIBRATOR_NOT_READY = 2,             // Calibrator is stabilizing or warming up
-  CALIBRATOR_READY = 3,                 // Calibrator is ready for use
+  CALIBRATOR_OFF = 1,                   // Calibrator is present but turned off
+  CALIBRATOR_NOT_READY = 2,             // Calibrator is present, but not available for use
+  CALIBRATOR_READY = 3,                 // Calibrator is present and ready for use
   CALIBRATOR_UNKNOWN = 4,               // Calibrator status is unknown
-  CALIBRATOR_ERROR = 5                  // Calibrator error condition
+  CALIBRATOR_ERROR = 5                  // Calibrator is in an error state
 };
 
 // Enum for cover status - matches ASCOM CoverStatus values
-// Since this is a manual flat panel, cover is always NotPresent
 enum CoverStatus {
-  COVER_NOT_PRESENT = 0,                // Device does not have a cover
+  COVER_NOT_PRESENT = 0,                // No cover is present
   COVER_CLOSED = 1,                     // Cover is closed
-  COVER_MOVING = 2,                     // Cover is moving
+  COVER_MOVING = 2,                     // Cover is moving (opening or closing)
   COVER_OPEN = 3,                       // Cover is open
   COVER_UNKNOWN = 4,                    // Cover status is unknown
-  COVER_ERROR = 5                       // Cover error condition
+  COVER_ERROR = 5                       // Cover is in an error state
 };
-
-// Global variables declarations
-extern bool isConnected;
-extern bool serialDebugEnabled;
-extern int currentBrightness;
-extern int maxBrightness;
-extern CalibratorStatus calibratorState;
-extern CoverStatus coverState;
-extern String deviceName;
 
 #endif // CONFIG_H

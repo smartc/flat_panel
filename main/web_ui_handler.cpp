@@ -1,48 +1,32 @@
 /*
  * ESP32 ASCOM Alpaca Flat Panel Calibrator
- * Web UI Handler Implementation
+ * Web UI Handler Implementation - FIXED VERSION
  */
 
 #include "web_ui_handler.h"
-#include "html_templates.h"
+#include <ArduinoJson.h>  // MISSING INCLUDE - THIS FIXES THE COMPILATION ERROR
 #include "calibrator_controller.h"
+#include "html_templates.h"
 #include "Debug.h"
-#include <WiFi.h>
 
-// Standard Web Server
+// Web server instance
 WebServer webUiServer(WEB_UI_PORT);
-
-// Preferences instance
-Preferences preferences;
 
 // Load configuration from preferences
 void loadConfiguration() {
-  preferences.begin(PREFERENCES_NAMESPACE, false);
+  Preferences preferences;
+  preferences.begin(PREFERENCES_NAMESPACE, true); // Read-only
   
-  // Load WiFi settings if they exist
-  if (preferences.isKey(PREF_WIFI_SSID)) {
-    String savedSSID = preferences.getString(PREF_WIFI_SSID, "");
-    String savedPassword = preferences.getString(PREF_WIFI_PASSWORD, "");
-    
-    if (savedSSID.length() > 0) {
-      strncpy(ssid, savedSSID.c_str(), sizeof(ssid) - 1);
-      ssid[sizeof(ssid) - 1] = '\0';
-    }
-    
-    if (savedPassword.length() > 0) {
-      strncpy(password, savedPassword.c_str(), sizeof(password) - 1);
-      password[sizeof(password) - 1] = '\0';
-    }
-  }
+  // Load WiFi settings
+  String storedSSID = preferences.getString(PREF_WIFI_SSID, DEFAULT_WIFI_SSID);
+  String storedPassword = preferences.getString(PREF_WIFI_PASSWORD, DEFAULT_WIFI_PASSWORD);
+  
+  storedSSID.toCharArray(ssid, SSID_SIZE);
+  storedPassword.toCharArray(password, PASSWORD_SIZE);
   
   // Load device settings
-  if (preferences.isKey(PREF_DEVICE_NAME)) {
-    deviceName = preferences.getString(PREF_DEVICE_NAME, "Flat Panel Calibrator");
-  }
-  
-  if (preferences.isKey(PREF_SERIAL_DEBUG)) {
-    serialDebugEnabled = preferences.getBool(PREF_SERIAL_DEBUG, false);
-  }
+  deviceName = preferences.getString(PREF_DEVICE_NAME, "Flat Panel Calibrator");
+  serialDebugEnabled = preferences.getBool(PREF_SERIAL_DEBUG, false);
   
   preferences.end();
   
@@ -51,7 +35,8 @@ void loadConfiguration() {
 
 // Save configuration to preferences
 void saveConfiguration() {
-  preferences.begin(PREFERENCES_NAMESPACE, false);
+  Preferences preferences;
+  preferences.begin(PREFERENCES_NAMESPACE, false); // Read-write
   
   // Save WiFi settings
   preferences.putString(PREF_WIFI_SSID, ssid);
@@ -79,12 +64,13 @@ void initWebUI() {
   webUiServer.on("/calibrator", HTTP_GET, handleCalibrator);
   webUiServer.on("/calibrator", HTTP_POST, handleCalibratorPost);
   
-  // Add status API for JavaScript updates
+  // Add status API for JavaScript updates - FIXED WITH ARDUINOJSON INCLUDE
   webUiServer.on("/api/status", HTTP_GET, []() {
     DynamicJsonDocument doc(200);
     doc["brightness"] = getCurrentBrightness();
     doc["state"] = getCalibratorStateString();
     doc["maxBrightness"] = getMaxBrightness();
+    doc["connected"] = isConnected;
     
     String response;
     serializeJson(doc, response);
@@ -200,72 +186,69 @@ void handleCalibratorPost() {
   }
 }
 
-// WiFi Configuration page handler
+// Handle WiFi configuration page
 void handleWifiConfig() {
   String html = getWifiConfigPage();
   webUiServer.send(200, "text/html", html);
 }
 
-// WiFi Configuration form submission handler
+// Handle WiFi configuration form submission
 void handleWifiConfigPost() {
+  bool wifiChanged = false;
+  
   if (webUiServer.hasArg("ssid") && webUiServer.hasArg("password")) {
     String newSSID = webUiServer.arg("ssid");
     String newPassword = webUiServer.arg("password");
     
-    if (newSSID.length() > 0) {
-      strncpy(ssid, newSSID.c_str(), sizeof(ssid) - 1);
-      ssid[sizeof(ssid) - 1] = '\0';
-      
-      if (newPassword.length() > 0) {
-        strncpy(password, newPassword.c_str(), sizeof(password) - 1);
-        password[sizeof(password) - 1] = '\0';
-      }
-      
-      // Save to preferences
+    if (newSSID.length() > 0 && newSSID != String(ssid)) {
+      newSSID.toCharArray(ssid, SSID_SIZE);
+      wifiChanged = true;
+    }
+    
+    if (newPassword != String(password)) {
+      newPassword.toCharArray(password, PASSWORD_SIZE);
+      wifiChanged = true;
+    }
+    
+    if (wifiChanged) {
       saveConfiguration();
       
-      Debug.println("WiFi settings saved via config page");
-      
-      // Display success message and restart options
-      String html = "<!DOCTYPE html><html>";
-      html += "<head><title>WiFi Configuration</title>";
-      html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
-      html += "<style>" + getCommonStyles() + "</style>";
-      html += "</head>";
-      html += "<body>";
-      html += "<div class='container'>";
-      html += "<h1>WiFi Configuration</h1>";
-      html += "<p class='success'>WiFi settings saved successfully!</p>";
-      html += "<p>SSID: " + String(ssid) + "</p>";
-      html += "<p>To apply the new settings, the device needs to restart.</p>";
-      html += "<button onclick='restart()'>Restart Now</button>";
-      html += "<button onclick='goBack()'>Back to Home</button>";
-      html += "<script>";
-      html += "function restart() {";
-      html += "  fetch('/restart', { method: 'POST' })";
-      html += "    .then(response => {";
-      html += "      alert('Device is restarting with new WiFi settings.');";
-      html += "    });";
-      html += "}";
-      html += "function goBack() {";
-      html += "  window.location.href = '/';";
-      html += "}";
-      html += "</script>";
-      html += "</div></body></html>";
+      String html = "<!DOCTYPE html><html><head><title>WiFi Updated</title>";
+      html += "<meta http-equiv='refresh' content='5;url=/'></head><body>";
+      html += "<h1>WiFi Settings Updated</h1>";
+      html += "<p>The device will restart to apply new WiFi settings...</p>";
+      html += "<p>You will be redirected to the main page in 5 seconds.</p>";
+      html += "</body></html>";
       
       webUiServer.send(200, "text/html", html);
+      
+      delay(2000);
+      ESP.restart();
     } else {
-      webUiServer.send(400, "text/plain", "SSID is required!");
+      String html = "<!DOCTYPE html><html><head><title>No Changes</title>";
+      html += "<meta http-equiv='refresh' content='3;url=/wificonfig'></head><body>";
+      html += "<h1>No Changes Detected</h1>";
+      html += "<p>Redirecting back to WiFi configuration...</p>";
+      html += "</body></html>";
+      
+      webUiServer.send(200, "text/html", html);
     }
   } else {
-    webUiServer.send(400, "text/plain", "Missing required parameters!");
+    webUiServer.send(400, "text/plain", "Missing SSID or password");
   }
 }
 
-// Handle device restart
+// Handle restart request
 void handleRestart() {
-  webUiServer.send(200, "text/plain", "Restarting device...");
-  Debug.println("Device restart requested via web interface");
+  String html = "<!DOCTYPE html><html><head><title>Restarting</title>";
+  html += "<meta http-equiv='refresh' content='10;url=/'></head><body>";
+  html += "<h1>Device Restarting...</h1>";
+  html += "<p>Please wait while the device restarts.</p>";
+  html += "<p>You will be redirected automatically in 10 seconds.</p>";
+  html += "</body></html>";
+  
+  webUiServer.send(200, "text/html", html);
+  
   delay(1000);
   ESP.restart();
 }

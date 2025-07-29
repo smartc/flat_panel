@@ -1,6 +1,6 @@
 /*
  * ESP32 ASCOM Alpaca Flat Panel Calibrator
- * Debug Utility Header
+ * Debug Utility Header - FIXED VERSION
  */
 
 #ifndef DEBUG_H
@@ -45,6 +45,15 @@ public:
     return currentLevel;
   }
   
+  // Print empty line - ADDED TO FIX COMPILATION ERROR
+  void println() {
+    #if DEBUG_LEVEL > 0
+      if (initialized) {
+        Serial.println();
+      }
+    #endif
+  }
+  
   // Print methods for different debug levels
   template <typename T>
   void print(T message, int level = 1) {
@@ -57,6 +66,16 @@ public:
   
   template <typename T>
   void println(T message, int level = 1) {
+    #if DEBUG_LEVEL > 0
+      if (initialized && level <= currentLevel) {
+        Serial.println(message);
+      }
+    #endif
+  }
+  
+  // ADDED: Support for Debug.println(level, message) syntax
+  template <typename T>
+  void println(int level, T message) {
     #if DEBUG_LEVEL > 0
       if (initialized && level <= currentLevel) {
         Serial.println(message);

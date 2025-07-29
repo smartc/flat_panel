@@ -75,16 +75,23 @@ void setup() {
   initWebUI();
   
   Debug.println("Setup complete!");
-  Debug.printf("Free heap: %d bytes\n", ESP.getFreeHeap());
-  Debug.println("Send 'DEBUG ON' via serial to enable debug output");
-  Debug.println("Send 'HELP' via serial for available commands");
+  Debug.println("Available interfaces:");
+  Debug.printf("  Web UI: http://%s/\n", WiFi.localIP().toString().c_str());
+  Debug.printf("  ASCOM Alpaca API: http://%s:%d/\n", WiFi.localIP().toString().c_str(), ALPACA_PORT);
+  Debug.println("  Serial commands: Available via USB");
+  Debug.println();
 }
 
 void loop() {
-  unsigned long currentTime = millis();
+  // Handle WiFi connection management
+  handleWiFiConnection();
   
-  // Handle WiFi connection
-  handleWiFi();
+  // Handle Alpaca discovery and API requests
+  handleAlpacaDiscovery();
+  handleAlpacaAPI();
+  
+  // Handle Web UI requests
+  handleWebUI();
   
   // Handle serial commands
   handleSerialCommands();
@@ -92,105 +99,87 @@ void loop() {
   // Update calibrator status
   updateCalibratorStatus();
   
-  // Handle Alpaca discovery
-  handleAlpacaDiscovery();
-
-  // Handle Alpaca endpoint requests
-  alpacaServer.handleClient();
-  
-  // Handle web UI requests
-  handleWebUI();
-  
-  // Periodic status update (every 30 seconds)
-  if (currentTime - lastStatusUpdate > 30000) {
-    Debug.printf(2, "Status: Calibrator=%s, Brightness=%d, WiFi=%s, Heap=%d\n",
-                 getCalibratorStateString().c_str(),
+  // Periodic status updates
+  if (millis() - lastStatusUpdate > 30000) { // Every 30 seconds
+    lastStatusUpdate = millis();
+    Debug.printf(2, "Status: %s, Brightness: %d%%, WiFi: %s\n", 
+                 getCalibratorStateString().c_str(), 
                  getCurrentBrightness(),
-                 WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected",
-                 ESP.getFreeHeap());
-    lastStatusUpdate = currentTime;
+                 WiFi.isConnected() ? "Connected" : (apMode ? "AP Mode" : "Disconnected"));
   }
   
   // Small delay to prevent watchdog issues
   delay(10);
 }
 
-// Initialize WiFi connection
 void initWiFi() {
   Debug.println("Initializing WiFi...");
   
   // Set WiFi mode
   WiFi.mode(WIFI_STA);
   
-  // Try to connect to saved network
-  if (strlen(ssid) > 0) {
-    Debug.printf("Connecting to WiFi network: %s\n", ssid);
-    WiFi.begin(ssid, password);
-    
-    // Wait up to 30 seconds for connection
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 60) {
-      delay(500);
-      Debug.print(".");
-      attempts++;
-    }
-    Debug.println("");
-    
-    if (WiFi.status() == WL_CONNECTED) {
-      Debug.println("WiFi connected successfully!");
-      Debug.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
-      Debug.printf("Signal strength: %d dBm\n", WiFi.RSSI());
-      apMode = false;
-    } else {
-      Debug.println("Failed to connect to WiFi, starting AP mode");
-      startAPMode();
-    }
+  // Check if we have valid credentials
+  if (strlen(ssid) == 0 || strcmp(ssid, DEFAULT_WIFI_SSID) == 0) {
+    Debug.println("No WiFi credentials configured, starting AP mode");
+    startAPMode();
+    return;
+  }
+  
+  // Try to connect to WiFi
+  Debug.printf("Connecting to WiFi network: %s\n", ssid);
+  WiFi.begin(ssid, password);
+  
+  // Wait for connection with timeout
+  unsigned long startTime = millis();
+  while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < 30000) {
+    delay(500);
+    Debug.print(".");
+  }
+  Debug.println();
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    Debug.printf("WiFi connected successfully!\n");
+    Debug.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
+    Debug.printf("Signal strength: %d dBm\n", WiFi.RSSI());
+    apMode = false;
   } else {
-    Debug.println("No WiFi credentials saved, starting AP mode");
+    Debug.println("Failed to connect to WiFi, starting AP mode");
     startAPMode();
   }
 }
 
-// Start Access Point mode for configuration
 void startAPMode() {
-  WiFi.mode(WIFI_AP);
+  Debug.println("Starting Access Point mode...");
   
-  if (WiFi.softAP(AP_SSID, AP_PASSWORD)) {
-    Debug.printf("AP mode started - SSID: %s, Password: %s\n", AP_SSID, AP_PASSWORD);
-    Debug.printf("AP IP address: %s\n", WiFi.softAPIP().toString().c_str());
-    apMode = true;
-    apStartTime = millis();
-  } else {
-    Debug.println("Failed to start AP mode!");
-  }
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(AP_SSID, AP_PASSWORD);
+  
+  IPAddress IP = WiFi.softAPIP();
+  Debug.printf("AP started successfully!\n");
+  Debug.printf("SSID: %s\n", AP_SSID);
+  Debug.printf("Password: %s\n", AP_PASSWORD);
+  Debug.printf("IP address: %s\n", IP.toString().c_str());
+  
+  apMode = true;
+  apStartTime = millis();
 }
 
-// Handle WiFi connection in main loop
-void handleWiFi() {
+void handleWiFiConnection() {
   if (apMode) {
-    // Check if we should exit AP mode after timeout
+    // In AP mode, check if we should try to connect to WiFi again
     if (millis() - apStartTime > AP_TIMEOUT) {
-      Debug.println("AP mode timeout, attempting to reconnect to WiFi");
+      Debug.println("AP mode timeout, attempting WiFi connection...");
+      apMode = false;
       initWiFi();
     }
   } else {
-    // Check if WiFi connection is lost
+    // In STA mode, check if connection is lost
     if (WiFi.status() != WL_CONNECTED) {
-      Debug.println("WiFi connection lost, attempting to reconnect...");
-      WiFi.reconnect();
-      
-      // If reconnection fails after 30 seconds, start AP mode
-      unsigned long reconnectStart = millis();
-      while (WiFi.status() != WL_CONNECTED && millis() - reconnectStart < 30000) {
-        delay(500);
-        Debug.print(".");
-      }
-      
-      if (WiFi.status() != WL_CONNECTED) {
-        Debug.println("\nFailed to reconnect, starting AP mode");
-        startAPMode();
-      } else {
-        Debug.println("\nWiFi reconnected successfully!");
+      static unsigned long lastReconnectAttempt = 0;
+      if (millis() - lastReconnectAttempt > 30000) { // Try reconnect every 30 seconds
+        Debug.println("WiFi connection lost, attempting reconnection...");
+        WiFi.reconnect();
+        lastReconnectAttempt = millis();
       }
     }
   }

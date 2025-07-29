@@ -1,6 +1,6 @@
 /*
  * ESP32 ASCOM Alpaca Flat Panel Calibrator
- * Calibrator Controller Implementation
+ * Calibrator Controller Implementation - FIXED STATE LOGIC
  */
 
 #include "calibrator_controller.h"
@@ -10,43 +10,38 @@
 
 // Global variables
 CalibratorStatus calibratorState = CALIBRATOR_OFF;
-CoverStatus coverState = COVER_NOT_PRESENT;  // Manual flat panel has no cover
-bool isConnected = true;                     // Device is always connected
-int currentBrightness = 0;                   // Current brightness percentage (0-100)
-int maxBrightness = MAX_BRIGHTNESS;          // Maximum brightness (configurable)
-bool serialDebugEnabled = false;            // Serial debug disabled by default
+CoverStatus coverState = COVER_NOT_PRESENT;
+bool isConnected = true;
+int currentBrightness = 0;
+int maxBrightness = MAX_BRIGHTNESS;
+bool serialDebugEnabled = false;
 String deviceName = "Flat Panel Calibrator";
 unsigned long lastStateChange = 0;
 
 void initializeCalibratorController() {
   Debug.println("Initializing Flat Panel Calibrator Controller...");
   
-  // Load configuration from preferences
   Preferences prefs;
-  prefs.begin(PREFERENCES_NAMESPACE, true);  // Read-only
+  prefs.begin(PREFERENCES_NAMESPACE, true);
   
-  // Load device settings
   deviceName = prefs.getString(PREF_DEVICE_NAME, "Flat Panel Calibrator");
   maxBrightness = prefs.getInt(PREF_MAX_BRIGHTNESS, MAX_BRIGHTNESS);
   serialDebugEnabled = prefs.getBool(PREF_SERIAL_DEBUG, false);
   
   prefs.end();
   
-  // Configure PWM output pin
   pinMode(PWM_OUTPUT_PIN, OUTPUT);
   
-  // Configure PWM (ESP32 core 3.x API)
   if (!ledcAttach(PWM_OUTPUT_PIN, PWM_FREQUENCY, PWM_RESOLUTION)) {
     Debug.println("ERROR: Failed to configure PWM");
     calibratorState = CALIBRATOR_ERROR;
     return;
   }
   
-  // Set initial PWM value to off
   ledcWrite(PWM_OUTPUT_PIN, 0);
   currentBrightness = 0;
   
-  // Set initial state
+  // FIXED: Start in OFF state, will change to READY when first commanded
   calibratorState = CALIBRATOR_OFF;
   coverState = COVER_NOT_PRESENT;
   lastStateChange = millis();
@@ -59,53 +54,46 @@ void initializeCalibratorController() {
 }
 
 void updateCalibratorStatus() {
-  // For a simple LED flat panel, the status is straightforward:
-  // - CALIBRATOR_OFF when brightness is 0
-  // - CALIBRATOR_READY when brightness is > 0
-  // - CALIBRATOR_ERROR if PWM configuration failed
-  
   if (calibratorState == CALIBRATOR_ERROR) {
-    return; // Don't change error state
+    return;
   }
   
-  CalibratorStatus newState = (currentBrightness > 0) ? CALIBRATOR_READY : CALIBRATOR_OFF;
+  // FIXED: Once a calibrator command has been issued, state should be READY
+  // regardless of brightness level (including 0). Only OFF during initialization.
+  // This matches ASCOM behavior where state indicates readiness, not current brightness.
   
-  if (newState != calibratorState) {
-    calibratorState = newState;
-    lastStateChange = millis();
-    Debug.printf("Calibrator state changed to: %s\n", getCalibratorStateString().c_str());
+  // Don't automatically change from READY back to OFF
+  if (calibratorState == CALIBRATOR_OFF) {
+    // Only change to READY when explicitly commanded
+    return;
   }
 }
 
 bool setCalibratorBrightness(int brightness) {
-  // Validate brightness range
   if (brightness < MIN_BRIGHTNESS || brightness > maxBrightness) {
     Debug.printf("Invalid brightness value: %d (valid range: %d-%d)\n", 
                  brightness, MIN_BRIGHTNESS, maxBrightness);
     return false;
   }
   
-  // Convert brightness percentage to PWM value
   int pwmValue = convertBrightnessToPWM(brightness);
-  
-  // Set PWM output
   ledcWrite(PWM_OUTPUT_PIN, pwmValue);
   currentBrightness = brightness;
   
-  // Update calibrator state
-  updateCalibratorStatus();
+  // FIXED: Set state to READY when any brightness command is issued
+  calibratorState = CALIBRATOR_READY;
+  lastStateChange = millis();
   
-  Debug.printf("Brightness set to %d%% (PWM: %d)\n", brightness, pwmValue);
+  Debug.printf("Brightness set to %d%% (PWM: %d), State: READY\n", brightness, pwmValue);
   return true;
 }
 
 bool turnCalibratorOn() {
-  // Turn on at maximum brightness
   return setCalibratorBrightness(maxBrightness);
 }
 
 bool turnCalibratorOff() {
-  // Turn off (set brightness to 0)
+  // FIXED: CalibratorOff sets brightness to 0 but keeps state as READY
   return setCalibratorBrightness(0);
 }
 
@@ -121,7 +109,6 @@ void setMaxBrightness(int brightness) {
   if (brightness >= MIN_BRIGHTNESS && brightness <= MAX_BRIGHTNESS) {
     maxBrightness = brightness;
     
-    // Save to preferences
     Preferences prefs;
     prefs.begin(PREFERENCES_NAMESPACE, false);
     prefs.putInt(PREF_MAX_BRIGHTNESS, maxBrightness);
@@ -129,7 +116,6 @@ void setMaxBrightness(int brightness) {
     
     Debug.printf("Max brightness set to %d%%\n", maxBrightness);
     
-    // If current brightness exceeds new max, reduce it
     if (currentBrightness > maxBrightness) {
       setCalibratorBrightness(maxBrightness);
     }
@@ -141,7 +127,7 @@ CalibratorStatus getCalibratorState() {
 }
 
 CoverStatus getCoverState() {
-  return coverState;  // Always COVER_NOT_PRESENT for manual flat panel
+  return coverState;
 }
 
 String getCalibratorStateString() {
@@ -195,8 +181,6 @@ bool isCalibratorReady() {
 }
 
 int convertBrightnessToPWM(int brightness) {
-  // Convert brightness percentage (0-100) to PWM value (0-1023)
-  // Using 10-bit resolution: 0-1023
   if (brightness <= 0) return 0;
   if (brightness >= 100) return MAX_PWM_VALUE;
   
@@ -204,7 +188,6 @@ int convertBrightnessToPWM(int brightness) {
 }
 
 int convertPWMToBrightness(int pwmValue) {
-  // Convert PWM value (0-1023) to brightness percentage (0-100)
   if (pwmValue <= 0) return 0;
   if (pwmValue >= MAX_PWM_VALUE) return 100;
   
