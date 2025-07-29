@@ -383,10 +383,27 @@ void handleCalibratorOn() {
     return;
   }
   
-  // FIXED: Check for improperly cased brightness parameter first
-  if (alpacaServer.hasArg("brightness") || alpacaServer.hasArg("BRIGHTNESS")) {
-    alpacaServer.send(400, "text/plain", "Invalid parameter casing - use 'Brightness'");
-    return;
+  // FIXED: Strict parameter validation - check ALL argument names for correct casing
+  for (int i = 0; i < alpacaServer.args(); i++) {
+    String argName = alpacaServer.argName(i);
+    
+    // Skip the standard client ID parameters (these are case-insensitive per spec)
+    if (argName.equalsIgnoreCase("ClientID") || 
+        argName.equalsIgnoreCase("ClientTransactionID")) {
+      continue;
+    }
+    
+    // Check for brightness parameter with wrong casing
+    if (argName.equalsIgnoreCase("brightness") && argName != "Brightness") {
+      alpacaServer.send(400, "text/plain", "Invalid parameter casing - use 'Brightness'");
+      return;
+    }
+    
+    // Reject any other unrecognized parameters
+    if (argName != "Brightness") {
+      alpacaServer.send(400, "text/plain", "Invalid parameter: " + argName);
+      return;
+    }
   }
   
   // Check for correct brightness parameter
