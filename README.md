@@ -22,93 +22,13 @@ An ASCOM Alpaca compliant flat panel calibrator for astrophotography using the E
 
 ### Wiring
 ```
-ESP32 GPIO4 → LED Panel PWM Input (via appropriate driver/resistor)
+ESP32 GPIO4 → MOSFET Trigger pin
+ESP32 GND → MOSFET GND
 ESP32 GND → LED Panel GND
-ESP32 VIN/3.3V → LED Panel VCC (or use external power supply)
+ESP32 VIN → LED Panel VCC 
 ```
 
 **Note**: Ensure your LED panel power requirements match your power supply. For high-power panels, use an external power supply and appropriate MOSFET driver circuit.
-
-## Important Notes for Arduino IDE
-
-### File Naming
-- **Rename** `main.ino` to `ESP32_Flat_Panel_Calibrator.ino` (or your preferred project name)
-- The `.ino` file must have the same name as the folder containing it
-- Arduino IDE will automatically include all `.h` and `.cpp` files in the project folder
-
-### Library Installation
-Only **one external library** is required:
-- **ArduinoJson**: Install via Library Manager (Tools → Manage Libraries → Search "ArduinoJson")
-
-All other libraries are included with the ESP32 board package:
-- WiFi, WebServer, ESPmDNS, Preferences, etc.
-
-### Compilation Tips
-- If you get compilation errors, check that all files are in the same folder
-- Ensure the ESP32 board package is properly installed
-- Try a lower upload speed (115200) if upload fails
-- Make sure the correct COM port is selected
-
-## Hardware Requirements
-
-### Arduino IDE Setup
-
-1. **Install ESP32 Board Package**:
-   - Open Arduino IDE
-   - File → Preferences → Additional Boards Manager URLs
-   - Add: `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
-   - Tools → Board → Boards Manager → Search "ESP32" → Install "esp32 by Espressif Systems"
-
-2. **Install Required Library**:
-   - Tools → Manage Libraries
-   - Search for "ArduinoJson" by Benoit Blanchon
-   - Install the latest version (6.21.0 or newer)
-   
-   **Note**: All other libraries (WiFi, WebServer, ESPmDNS, Preferences) are built-in with the ESP32 package.
-
-3. **Board Configuration**:
-   - Tools → Board → ESP32 Arduino → "ESP32 Dev Module" (or your specific board)
-   - Tools → Flash Frequency → 40MHz
-   - Tools → Upload Speed → 921600 (try 115200 if upload fails)
-   - Tools → Flash Mode → QIO
-   - Tools → Partition Scheme → "Default 4MB with spiffs (1.2MB APP/1.5MB SPIFFS)"
-   - Tools → Port → Select your ESP32's COM port
-
-### Project Setup
-
-1. **Create Project Folder**:
-   - Create a new folder named `ESP32_Flat_Panel_Calibrator`
-   - Copy all project files (.h, .cpp, and .ino) into this folder
-   - The main sketch file should be named `ESP32_Flat_Panel_Calibrator.ino`
-
-2. **File Structure** (Arduino IDE will auto-detect all files):
-   ```
-   ESP32_Flat_Panel_Calibrator/
-   ├── ESP32_Flat_Panel_Calibrator.ino  (main sketch file)
-   ├── config.h
-   ├── calibrator_controller.h
-   ├── calibrator_controller.cpp
-   ├── serial_handler.h
-   ├── serial_handler.cpp
-   ├── Debug.h
-   ├── Debug.cpp
-   ├── alpaca_handler.h
-   ├── alpaca_handler.cpp
-   ├── web_ui_handler.h
-   ├── web_ui_handler.cpp
-   └── html_templates.h
-   ```
-
-3. **Configure WiFi Credentials** (Optional):
-   - Edit `config.h` in Arduino IDE
-   - Update `DEFAULT_WIFI_SSID` and `DEFAULT_WIFI_PASSWORD`
-   - Or configure via web interface after upload
-
-4. **Upload the Firmware**:
-   - Open `ESP32_Flat_Panel_Calibrator.ino` in Arduino IDE
-   - Verify all files appear as tabs in the IDE
-   - Connect ESP32 via USB
-   - Click Upload button or press Ctrl+U
 
 ## Initial Setup
 
@@ -251,17 +171,6 @@ GET  /management/v1/configureddevices
 3. **Dim Output**: Check maximum brightness setting
 4. **Driver Circuit**: Ensure proper current limiting
 
-## Technical Specifications
-
-- **Microcontroller**: ESP32 (any variant)
-- **PWM Resolution**: 10-bit (0-1023 steps)
-- **PWM Frequency**: 1 kHz
-- **Brightness Range**: 0-100% (configurable maximum)
-- **Network Protocols**: WiFi 802.11 b/g/n, HTTP, UDP
-- **ASCOM Compliance**: Alpaca API v1, CoverCalibrator interface v1
-- **Power Requirements**: 5V via USB or external supply
-- **Operating Temperature**: -10°C to +60°C (ESP32 specifications)
-
 ## License
 
 This project is released under the MIT License. See LICENSE file for details.
@@ -271,25 +180,4 @@ This project is released under the MIT License. See LICENSE file for details.
 For issues, questions, or contributions:
 1. Check the troubleshooting section above
 2. Review the ASCOM Alpaca API documentation
-3. Submit issues with detailed descriptions and serial output logs
-
-## Contributing
-
-Contributions welcome! Please follow these guidelines:
-1. Test thoroughly on actual hardware
-2. Maintain ASCOM Alpaca compliance
-3. Update documentation for any new features
-4. Follow existing code style and structure
-
-## Version History
-
-- **v1.0.0**: Initial release
-  - Full ASCOM Alpaca CoverCalibrator implementation
-  - Web interface with brightness control
-  - Serial command interface
-  - WiFi configuration and AP mode
-  - 10-bit PWM brightness control
-
-## Acknowledgments
-
-Based on the ESP32 ASCOM Alpaca Roll-Off Roof Controller project and inspired by the ASCOM Standards community.
+3. Submit issues with detailed descriptions
