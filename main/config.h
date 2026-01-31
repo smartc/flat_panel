@@ -25,9 +25,9 @@ const int PWM_RESOLUTION = 10;          // 10-bit resolution (0-1023) - CHANGED 
 const int MAX_PWM_VALUE = 1023;         // 2^10 - 1 (CHANGED FROM 4095)
 const int MIN_PWM_VALUE = 0;            // Minimum PWM value
 
-// Calibrator brightness settings
-const int MAX_BRIGHTNESS = 100;         // Maximum brightness percentage
-const int MIN_BRIGHTNESS = 0;           // Minimum brightness percentage
+// Calibrator brightness settings (direct PWM digital units)
+const int MAX_BRIGHTNESS = MAX_PWM_VALUE;  // Maximum brightness in digital units (0-1023)
+const int MIN_BRIGHTNESS = 0;              // Minimum brightness in digital units
 
 // Default WiFi credentials (will be overridden by stored settings if available)
 #define DEFAULT_WIFI_SSID "your_wifi_ssid"

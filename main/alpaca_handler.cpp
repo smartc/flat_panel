@@ -334,7 +334,7 @@ void handleAction() {
   String actionName = alpacaServer.hasArg("Action") ? alpacaServer.arg("Action") : "";
   
   if (actionName == "status") {
-    String status = "State: " + getCalibratorStateString() + ", Brightness: " + String(getCurrentBrightness()) + "%";
+    String status = "State: " + getCalibratorStateString() + ", Brightness: " + String(getCurrentBrightness()) + "/" + String(MAX_PWM_VALUE);
     sendAlpacaResponse(clientID, clientTransactionID, 0, "", status);
   } else {
     sendAlpacaResponse(clientID, clientTransactionID, ASCOM_ERROR_NOT_IMPLEMENTED, "Action not implemented", "");
@@ -583,8 +583,8 @@ void handleCoverCalibratorSetup() {
   html += "<h2>Current Status</h2>";
   html += "<p><strong>Device:</strong> " + deviceName + "</p>";
   html += "<p><strong>State:</strong> <span id='state'>" + getCalibratorStateString() + "</span></p>";
-  html += "<p><strong>Brightness:</strong> <span id='currentBrightness'>" + String(getCurrentBrightness()) + "%</span></p>";
-  html += "<p><strong>Max Brightness:</strong> " + String(getMaxBrightness()) + "%</p>";
+  html += "<p><strong>Brightness:</strong> <span id='currentBrightness'>" + String(getCurrentBrightness()) + "/" + String(MAX_PWM_VALUE) + "</span></p>";
+  html += "<p><strong>Max Brightness:</strong> " + String(getMaxBrightness()) + "</p>";
   html += "<p><strong>IP Address:</strong> " + WiFi.localIP().toString() + "</p>";
   html += "</div>";
   
@@ -595,7 +595,7 @@ void handleCoverCalibratorSetup() {
   html += "<br><br>";
   html += "<label for='brightness'>Set Brightness: </label>";
   html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='setBrightness(this.value)'>";
-  html += "<div class='brightness-display' id='brightnessValue'>" + String(getCurrentBrightness()) + "%</div>";
+  html += "<div class='brightness-display' id='brightnessValue'>" + String(getCurrentBrightness()) + "</div>";
   html += "</div>";
   
   html += "<div class='status'>";
@@ -614,9 +614,9 @@ void handleCoverCalibratorSetup() {
   html += "    .then(r => r.json()).then(d => document.getElementById('state').innerText = d.Value == 1 ? 'Off' : d.Value == 3 ? 'Ready' : 'Unknown');";
   html += "  fetch('/api/v1/covercalibrator/0/brightness?ClientID=1&ClientTransactionID=1')";
   html += "    .then(r => r.json()).then(d => {";
-  html += "      document.getElementById('currentBrightness').innerText = d.Value + '%';";
+  html += "      document.getElementById('currentBrightness').innerText = d.Value + '/" + String(MAX_PWM_VALUE) + "';";
   html += "      document.getElementById('brightness').value = d.Value;";
-  html += "      document.getElementById('brightnessValue').innerText = d.Value + '%';";
+  html += "      document.getElementById('brightnessValue').innerText = d.Value;";
   html += "    });";
   html += "}";
   html += "function calibratorOn() {";
@@ -628,7 +628,7 @@ void handleCoverCalibratorSetup() {
   html += "    .then(() => setTimeout(updateStatus, 200));";
   html += "}";
   html += "function setBrightness(value) {";
-  html += "  document.getElementById('brightnessValue').innerText = value + '%';";
+  html += "  document.getElementById('brightnessValue').innerText = value;";
   html += "  fetch('/api/v1/covercalibrator/0/calibratoron', {method: 'PUT', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'ClientID=1&ClientTransactionID=1&Brightness=' + value})";
   html += "    .then(() => setTimeout(updateStatus, 200));";
   html += "}";

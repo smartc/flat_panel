@@ -18,7 +18,7 @@ void initSerialHandler() {
   Debug.println("Available commands:");
   Debug.println("  <00> = Turn calibrator off");
   Debug.println("  <01> = Turn calibrator on (max brightness)");
-  Debug.println("  <02#xxx> = Set brightness (0-100)");
+  Debug.println("  <02#xxx> = Set brightness (0-" + String(MAX_BRIGHTNESS) + ")");
   Debug.println("  DEBUG ON/OFF = Enable/disable debug output");
   Debug.println("  STATUS = Show current status");
   Debug.println("  HELP = Show this help");
@@ -132,7 +132,7 @@ void handleBrightnessCommand(const String& parameter) {
   }
   
   if (setCalibratorBrightness(brightness)) {
-    sendSerialResponse("Brightness set to " + String(brightness) + "%");
+    sendSerialResponse("Brightness set to " + String(brightness) + "/" + String(MAX_PWM_VALUE));
   } else {
     sendSerialResponse("Error: Failed to set brightness");
   }
@@ -140,7 +140,7 @@ void handleBrightnessCommand(const String& parameter) {
 
 void handleOnCommand() {
   if (turnCalibratorOn()) {
-    sendSerialResponse("Calibrator turned ON (brightness: " + String(getCurrentBrightness()) + "%)");
+    sendSerialResponse("Calibrator turned ON (brightness: " + String(getCurrentBrightness()) + "/" + String(MAX_PWM_VALUE) + ")");
   } else {
     sendSerialResponse("Error: Failed to turn on calibrator");
   }
@@ -158,7 +158,7 @@ void handleMaxBrightnessCommand(const String& parameter) {
   int maxBright = parameter.toInt();
   
   if (parameter.length() == 0) {
-    sendSerialResponse("Current max brightness: " + String(getMaxBrightness()) + "%");
+    sendSerialResponse("Current max brightness: " + String(getMaxBrightness()));
     return;
   }
   
@@ -168,7 +168,7 @@ void handleMaxBrightnessCommand(const String& parameter) {
   }
   
   setMaxBrightness(maxBright);
-  sendSerialResponse("Max brightness set to " + String(maxBright) + "%");
+  sendSerialResponse("Max brightness set to " + String(maxBright));
 }
 
 void handleDebugCommand(const String& parameter) {
@@ -202,7 +202,7 @@ void printSerialHelp() {
   Serial.println("Bracketed Commands (legacy format):");
   Serial.println("  <00>         = Turn calibrator OFF");
   Serial.println("  <01>         = Turn calibrator ON (max brightness)");
-  Serial.println("  <02#xxx>     = Set brightness (0-" + String(getMaxBrightness()) + ")");
+  Serial.println("  <02#xxxx>    = Set brightness (0-" + String(getMaxBrightness()) + ")");
   Serial.println();
   Serial.println("Text Commands:");
   Serial.println("  ON           = Turn calibrator ON");
@@ -214,8 +214,8 @@ void printSerialHelp() {
   Serial.println("  HELP         = Show this help");
   Serial.println();
   Serial.println("Examples:");
-  Serial.println("  <02#50>      = Set 50% brightness");
-  Serial.println("  BRIGHTNESS 75 = Set 75% brightness");
+  Serial.println("  <02#512>     = Set brightness to 512");
+  Serial.println("  BRIGHTNESS 768 = Set brightness to 768");
   Serial.println("  DEBUG ON     = Enable debug messages");
   Serial.println();
 }
@@ -228,8 +228,8 @@ void printSerialStatus() {
   Serial.println("Firmware: " + String(DEVICE_VERSION));
   Serial.println("Calibrator State: " + getCalibratorStateString());
   Serial.println("Cover State: " + getCoverStateString());
-  Serial.println("Current Brightness: " + String(getCurrentBrightness()) + "%");
-  Serial.println("Max Brightness: " + String(getMaxBrightness()) + "%");
+  Serial.println("Current Brightness: " + String(getCurrentBrightness()) + "/" + String(MAX_PWM_VALUE));
+  Serial.println("Max Brightness: " + String(getMaxBrightness()));
   Serial.println("Connected: " + String(isConnected ? "Yes" : "No"));
   Serial.println("Debug Enabled: " + String(serialDebugEnabled ? "Yes" : "No"));
   

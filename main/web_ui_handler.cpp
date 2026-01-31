@@ -174,7 +174,7 @@ void handleCalibratorPost() {
     } else if (action == "brightness" && webUiServer.hasArg("brightness")) {
       int brightness = webUiServer.arg("brightness").toInt();
       if (setCalibratorBrightness(brightness)) {
-        webUiServer.send(200, "text/plain", "Brightness set to " + String(brightness) + "%");
+        webUiServer.send(200, "text/plain", "Brightness set to " + String(brightness) + "/" + String(MAX_PWM_VALUE));
       } else {
         webUiServer.send(400, "text/plain", "Invalid brightness value");
       }

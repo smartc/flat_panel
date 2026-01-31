@@ -48,7 +48,7 @@ void initializeCalibratorController() {
   
   Debug.println("Calibrator Controller initialized successfully");
   Debug.printf("Device Name: %s\n", deviceName.c_str());
-  Debug.printf("Max Brightness: %d%%\n", maxBrightness);
+  Debug.printf("Max Brightness: %d\n", maxBrightness);
   Debug.printf("PWM Pin: %d, Frequency: %dHz, Resolution: %d-bit\n", 
                PWM_OUTPUT_PIN, PWM_FREQUENCY, PWM_RESOLUTION);
 }
@@ -76,15 +76,14 @@ bool setCalibratorBrightness(int brightness) {
     return false;
   }
   
-  int pwmValue = convertBrightnessToPWM(brightness);
-  ledcWrite(PWM_OUTPUT_PIN, pwmValue);
+  ledcWrite(PWM_OUTPUT_PIN, brightness);
   currentBrightness = brightness;
-  
+
   // FIXED: Set state to READY when any brightness command is issued
   calibratorState = CALIBRATOR_READY;
   lastStateChange = millis();
-  
-  Debug.printf("Brightness set to %d%% (PWM: %d), State: READY\n", brightness, pwmValue);
+
+  Debug.printf("Brightness set to %d/%d, State: READY\n", brightness, MAX_PWM_VALUE);
   return true;
 }
 
@@ -114,7 +113,7 @@ void setMaxBrightness(int brightness) {
     prefs.putInt(PREF_MAX_BRIGHTNESS, maxBrightness);
     prefs.end();
     
-    Debug.printf("Max brightness set to %d%%\n", maxBrightness);
+    Debug.printf("Max brightness set to %d\n", maxBrightness);
     
     if (currentBrightness > maxBrightness) {
       setCalibratorBrightness(maxBrightness);
@@ -180,16 +179,3 @@ bool isCalibratorReady() {
   return calibratorState == CALIBRATOR_READY;
 }
 
-int convertBrightnessToPWM(int brightness) {
-  if (brightness <= 0) return 0;
-  if (brightness >= 100) return MAX_PWM_VALUE;
-  
-  return (brightness * MAX_PWM_VALUE) / 100;
-}
-
-int convertPWMToBrightness(int pwmValue) {
-  if (pwmValue <= 0) return 0;
-  if (pwmValue >= MAX_PWM_VALUE) return 100;
-  
-  return (pwmValue * 100) / MAX_PWM_VALUE;
-}

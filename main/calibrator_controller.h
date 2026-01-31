@@ -34,7 +34,5 @@ String getCalibratorStateString(CalibratorStatus status);
 String getCoverStateString();
 String getCoverStateString(CoverStatus status);
 bool isCalibratorReady();
-int convertBrightnessToPWM(int brightness);
-int convertPWMToBrightness(int pwmValue);
 
 #endif // CALIBRATOR_CONTROLLER_H

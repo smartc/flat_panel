@@ -120,8 +120,8 @@ inline String getHomePage() {
   }
   
   html += "<tr><td>Calibrator State</td><td class='" + statusClass + "'>" + statusString + "</td></tr>\n";
-  html += "<tr><td>Current Brightness</td><td>" + String(getCurrentBrightness()) + "%</td></tr>\n";
-  html += "<tr><td>Max Brightness</td><td>" + String(getMaxBrightness()) + "%</td></tr>\n";
+  html += "<tr><td>Current Brightness</td><td>" + String(getCurrentBrightness()) + "/" + String(MAX_PWM_VALUE) + "</td></tr>\n";
+  html += "<tr><td>Max Brightness</td><td>" + String(getMaxBrightness()) + "</td></tr>\n";
   html += "<tr><td>Connected</td><td>" + String(isConnected ? "Yes" : "No") + "</td></tr>\n";
   html += "</table>\n";
   html += "</div>\n";
@@ -136,10 +136,10 @@ inline String getHomePage() {
   html += "<div class='brightness-control'>\n";
   html += "<label for='brightness'>Brightness Control:</label>\n";
   html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='setBrightness(this.value)'>\n";
-  html += "<div class='brightness-display center' id='brightnessValue'>" + String(getCurrentBrightness()) + "%</div>\n";
+  html += "<div class='brightness-display center' id='brightnessValue'>" + String(getCurrentBrightness()) + "</div>\n";
   html += "</div>\n";
   html += "</div>\n";
-  
+
   // Network Information Card
   html += "<div class='card'>\n";
   html += "<h2>Network Information</h2>\n";
@@ -166,12 +166,12 @@ inline String getHomePage() {
   html += "    .then(data => {\n";
   html += "      const brightness = data.brightness;\n";
   html += "      document.getElementById('brightness').value = brightness;\n";
-  html += "      document.getElementById('brightnessValue').innerText = brightness + '%';\n";
+  html += "      document.getElementById('brightnessValue').innerText = brightness;\n";
   html += "      // Update status table if it exists\n";
   html += "      const statusRows = document.querySelectorAll('td');\n";
   html += "      statusRows.forEach(cell => {\n";
   html += "        if (cell.previousElementSibling && cell.previousElementSibling.innerText === 'Current Brightness') {\n";
-  html += "          cell.innerText = brightness + '%';\n";
+  html += "          cell.innerText = brightness + '/" + String(MAX_PWM_VALUE) + "';\n";
   html += "        }\n";
   html += "      });\n";
   html += "    })\n";
@@ -194,12 +194,12 @@ inline String getHomePage() {
   html += "    });\n";
   html += "}\n";
   html += "function setBrightness(value) {\n";
-  html += "  document.getElementById('brightnessValue').innerText = value + '%';\n";
+  html += "  document.getElementById('brightnessValue').innerText = value;\n";
   html += "  // Update status table immediately\n";
   html += "  const statusRows = document.querySelectorAll('td');\n";
   html += "  statusRows.forEach(cell => {\n";
   html += "    if (cell.previousElementSibling && cell.previousElementSibling.innerText === 'Current Brightness') {\n";
-  html += "      cell.innerText = value + '%';\n";
+  html += "      cell.innerText = value + '/" + String(MAX_PWM_VALUE) + "';\n";
   html += "    }\n";
   html += "  });\n";
   html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=brightness&brightness=' + value })\n";
@@ -229,7 +229,7 @@ inline String getSetupPage() {
   html += "<form method='post' action='/setup'>\n";
   html += "<label for='deviceName'>Device Name:</label>\n";
   html += "<input type='text' id='deviceName' name='deviceName' value='" + deviceName + "'>\n";
-  html += "<label for='maxBrightness'>Maximum Brightness (%):</label>\n";
+  html += "<label for='maxBrightness'>Maximum Brightness (0-" + String(MAX_BRIGHTNESS) + "):</label>\n";
   html += "<input type='number' id='maxBrightness' name='maxBrightness' min='1' max='" + String(MAX_BRIGHTNESS) + "' value='" + String(getMaxBrightness()) + "'>\n";
   html += "<label><input type='checkbox' name='debugEnabled' value='true'" + String(serialDebugEnabled ? " checked" : "") + "> Enable Serial Debug Output</label><br><br>\n";
   html += "<input type='submit' value='Save Settings'>\n";
@@ -241,8 +241,8 @@ inline String getSetupPage() {
   html += "<h2>Current Status</h2>\n";
   html += "<table>\n";
   html += "<tr><td>Calibrator State</td><td>" + getCalibratorStateString() + "</td></tr>\n";
-  html += "<tr><td>Current Brightness</td><td>" + String(getCurrentBrightness()) + "%</td></tr>\n";
-  html += "<tr><td>Max Brightness</td><td>" + String(getMaxBrightness()) + "%</td></tr>\n";
+  html += "<tr><td>Current Brightness</td><td>" + String(getCurrentBrightness()) + "/" + String(MAX_PWM_VALUE) + "</td></tr>\n";
+  html += "<tr><td>Max Brightness</td><td>" + String(getMaxBrightness()) + "</td></tr>\n";
   html += "<tr><td>Debug Enabled</td><td>" + String(serialDebugEnabled ? "Yes" : "No") + "</td></tr>\n";
   html += "</table>\n";
   html += "</div>\n";
@@ -283,20 +283,20 @@ inline String getCalibratorPage() {
   html += "<div class='card'>\n";
   html += "<h2>Brightness Control</h2>\n";
   html += "<div class='center'>\n";
-  html += "<div class='brightness-display'>Current: " + String(getCurrentBrightness()) + "%</div>\n";
+  html += "<div class='brightness-display'>Current: " + String(getCurrentBrightness()) + "/" + String(MAX_PWM_VALUE) + "</div>\n";
   html += "<div class='brightness-display'>State: " + getCalibratorStateString() + "</div>\n";
   html += "</div>\n";
   html += "<div class='brightness-control'>\n";
   html += "<label for='brightness'>Brightness:</label>\n";
   html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='setBrightness(this.value)'>\n";
-  html += "<div class='brightness-display center' id='brightnessValue'>" + String(getCurrentBrightness()) + "%</div>\n";
+  html += "<div class='brightness-display center' id='brightnessValue'>" + String(getCurrentBrightness()) + "</div>\n";
   html += "</div>\n";
   html += "<div class='button-row center'>\n";
   html += "<button onclick='calibratorOff()' class='button-danger'>Turn OFF</button>\n";
-  html += "<button onclick='setBrightness(25)' class='button-primary'>25%</button>\n";
-  html += "<button onclick='setBrightness(50)' class='button-primary'>50%</button>\n";
-  html += "<button onclick='setBrightness(75)' class='button-primary'>75%</button>\n";
-  html += "<button onclick='calibratorOn()' class='button-success'>100%</button>\n";
+  html += "<button onclick='setBrightness(256)' class='button-primary'>256</button>\n";
+  html += "<button onclick='setBrightness(512)' class='button-primary'>512</button>\n";
+  html += "<button onclick='setBrightness(768)' class='button-primary'>768</button>\n";
+  html += "<button onclick='calibratorOn()' class='button-success'>Max</button>\n";
   html += "</div>\n";
   html += "</div>\n";
   
@@ -309,11 +309,11 @@ inline String getCalibratorPage() {
   html += "      if (data.ErrorNumber === 0) {\n";
   html += "        const brightness = data.Value;\n";
   html += "        document.getElementById('brightness').value = brightness;\n";
-  html += "        document.getElementById('brightnessValue').innerText = brightness + '%';\n";
+  html += "        document.getElementById('brightnessValue').innerText = brightness;\n";
   html += "        // Update the current brightness display\n";
   html += "        const currentDisplay = document.querySelector('.brightness-display');\n";
   html += "        if (currentDisplay) {\n";
-  html += "          currentDisplay.innerHTML = 'Current: ' + brightness + '%';\n";
+  html += "          currentDisplay.innerHTML = 'Current: ' + brightness + '/" + String(MAX_PWM_VALUE) + "';\n";
   html += "        }\n";
   html += "      }\n";
   html += "    });\n";
@@ -330,11 +330,11 @@ inline String getCalibratorPage() {
   html += "}\n";
   html += "function setBrightness(value) {\n";
   html += "  document.getElementById('brightness').value = value;\n";
-  html += "  document.getElementById('brightnessValue').innerText = value + '%';\n";
+  html += "  document.getElementById('brightnessValue').innerText = value;\n";
   html += "  // Update current brightness display immediately\n";
   html += "  const currentDisplay = document.querySelector('.brightness-display');\n";
   html += "  if (currentDisplay) {\n";
-  html += "    currentDisplay.innerHTML = 'Current: ' + value + '%';\n";
+  html += "    currentDisplay.innerHTML = 'Current: ' + value + '/" + String(MAX_PWM_VALUE) + "';\n";
   html += "  }\n";
   html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=brightness&brightness=' + value })\n";
   html += "    .then(response => response.text());\n";
