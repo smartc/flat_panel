@@ -4,7 +4,8 @@
  */
 
 #include "web_ui_handler.h"
-#include <ArduinoJson.h>  // MISSING INCLUDE - THIS FIXES THE COMPILATION ERROR
+#include <ArduinoJson.h>
+#include <ElegantOTA.h>
 #include "calibrator_controller.h"
 #include "html_templates.h"
 #include "Debug.h"
@@ -84,6 +85,10 @@ void initWebUI() {
   // Restart handler
   webUiServer.on("/restart", HTTP_POST, handleRestart);
   
+  // Start ElegantOTA (available at /update)
+  ElegantOTA.begin(&webUiServer);
+  Debug.println("ElegantOTA initialized at /update");
+
   // Start server
   webUiServer.begin();
   Debug.printf("Web UI server started on port %d\n", WEB_UI_PORT);

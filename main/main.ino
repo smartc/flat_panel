@@ -31,6 +31,7 @@
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include <ElegantOTA.h>
 
 // Project includes
 #include "config.h"
@@ -98,13 +99,17 @@ void loop() {
   
   // Update calibrator status
   updateCalibratorStatus();
-  
+
+  // Handle ElegantOTA
+  ElegantOTA.loop();
+
   // Periodic status updates
   if (millis() - lastStatusUpdate > 30000) { // Every 30 seconds
     lastStatusUpdate = millis();
-    Debug.printf(2, "Status: %s, Brightness: %d%%, WiFi: %s\n", 
-                 getCalibratorStateString().c_str(), 
+    Debug.printf(2, "Status: %s, Brightness: %d/%d, WiFi: %s\n",
+                 getCalibratorStateString().c_str(),
                  getCurrentBrightness(),
+                 MAX_PWM_VALUE,
                  WiFi.isConnected() ? "Connected" : (apMode ? "AP Mode" : "Disconnected"));
   }
   

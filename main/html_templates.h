@@ -83,6 +83,7 @@ inline String getNavBar() {
     "<a href='/calibrator' class='nav-button'>Calibrator</a>\n"
     "<a href='/setup' class='nav-button'>Setup</a>\n"
     "<a href='/wificonfig' class='nav-button'>WiFi Config</a>\n"
+    "<a href='/update' class='nav-button'>Firmware Update</a>\n"
     "<a href='http://" + WiFi.localIP().toString() + ":" + String(ALPACA_PORT) + "/setup/v1/covercalibrator/0/setup' class='nav-button'>ASCOM Controls</a>\n"
     "</div>\n";
   

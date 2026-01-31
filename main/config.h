@@ -12,7 +12,7 @@
 #define DEBUG_LEVEL 0  // 0=Off, 1=Basic, 2=Verbose
 
 // Version Information
-#define DEVICE_VERSION "1.0.1"
+#define DEVICE_VERSION "1.1.0"
 #define DEVICE_MANUFACTURER "Corey Smart"
 #define DEVICE_NAME "ESP32 Flat Panel Calibrator"
 
