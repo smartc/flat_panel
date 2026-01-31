@@ -53,6 +53,10 @@ inline String getCommonStyles() {
     ".button-danger { background-color: #e74c3c; }\n"
     ".brightness-control { margin: 20px 0; }\n"
     ".brightness-display { font-size: 24px; font-weight: bold; margin: 10px 0; }\n"
+    ".brightness-input { display: inline-flex; align-items: center; gap: 8px; margin: 10px 0; }\n"
+    ".brightness-input input[type=number] { width: 100px; padding: 8px; font-size: 18px; font-weight: bold; text-align: center; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 0; }\n"
+    ".brightness-input span { font-size: 14px; color: #666; }\n"
+    ".brightness-input button { padding: 8px 12px; font-size: 14px; margin: 0; }\n"
     ".success { color: green; font-weight: bold; }\n"
     ".error { color: red; font-weight: bold; }\n"
     ".center { text-align: center; }\n";
@@ -136,8 +140,12 @@ inline String getHomePage() {
   html += "</div>\n";
   html += "<div class='brightness-control'>\n";
   html += "<label for='brightness'>Brightness Control:</label>\n";
-  html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='setBrightness(this.value)'>\n";
-  html += "<div class='brightness-display center' id='brightnessValue'>" + String(getCurrentBrightness()) + "</div>\n";
+  html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' oninput='onSliderChange(this.value)'>\n";
+  html += "<div class='brightness-input center'>\n";
+  html += "<input type='number' id='brightnessNum' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='onNumChange(this.value)'>\n";
+  html += "<span>/ " + String(getMaxBrightness()) + "</span>\n";
+  html += "<button onclick='onNumChange(document.getElementById(\"brightnessNum\").value)'>Set</button>\n";
+  html += "</div>\n";
   html += "</div>\n";
   html += "</div>\n";
 
@@ -161,52 +169,40 @@ inline String getHomePage() {
   
   // JavaScript for controls
   html += "<script>\n";
-  html += "function updateStatus() {\n";
-  html += "  fetch('/api/status')\n";
-  html += "    .then(response => response.json())\n";
-  html += "    .then(data => {\n";
-  html += "      const brightness = data.brightness;\n";
-  html += "      document.getElementById('brightness').value = brightness;\n";
-  html += "      document.getElementById('brightnessValue').innerText = brightness;\n";
-  html += "      // Update status table if it exists\n";
-  html += "      const statusRows = document.querySelectorAll('td');\n";
-  html += "      statusRows.forEach(cell => {\n";
-  html += "        if (cell.previousElementSibling && cell.previousElementSibling.innerText === 'Current Brightness') {\n";
-  html += "          cell.innerText = brightness + '/" + String(MAX_PWM_VALUE) + "';\n";
-  html += "        }\n";
-  html += "      });\n";
-  html += "    })\n";
-  html += "    .catch(err => console.log('Status update failed:', err));\n";
-  html += "}\n";
-  html += "function calibratorOn() {\n";
-  html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=on' })\n";
-  html += "    .then(response => response.text())\n";
-  html += "    .then(data => { \n";
-  html += "      setTimeout(updateStatus, 500);\n";
-  html += "      setTimeout(() => location.reload(), 1000); \n";
-  html += "    });\n";
-  html += "}\n";
-  html += "function calibratorOff() {\n";
-  html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=off' })\n";
-  html += "    .then(response => response.text())\n";
-  html += "    .then(data => { \n";
-  html += "      setTimeout(updateStatus, 500);\n";
-  html += "      setTimeout(() => location.reload(), 1000); \n";
-  html += "    });\n";
-  html += "}\n";
-  html += "function setBrightness(value) {\n";
-  html += "  document.getElementById('brightnessValue').innerText = value;\n";
-  html += "  // Update status table immediately\n";
-  html += "  const statusRows = document.querySelectorAll('td');\n";
-  html += "  statusRows.forEach(cell => {\n";
+  html += "function syncControls(value) {\n";
+  html += "  document.getElementById('brightness').value = value;\n";
+  html += "  document.getElementById('brightnessNum').value = value;\n";
+  html += "  var statusRows = document.querySelectorAll('td');\n";
+  html += "  statusRows.forEach(function(cell) {\n";
   html += "    if (cell.previousElementSibling && cell.previousElementSibling.innerText === 'Current Brightness') {\n";
   html += "      cell.innerText = value + '/" + String(MAX_PWM_VALUE) + "';\n";
   html += "    }\n";
   html += "  });\n";
+  html += "}\n";
+  html += "function updateStatus() {\n";
+  html += "  fetch('/api/status')\n";
+  html += "    .then(response => response.json())\n";
+  html += "    .then(data => { syncControls(data.brightness); })\n";
+  html += "    .catch(err => console.log('Status update failed:', err));\n";
+  html += "}\n";
+  html += "function setBrightness(value) {\n";
+  html += "  value = Math.max(0, Math.min(" + String(getMaxBrightness()) + ", parseInt(value) || 0));\n";
+  html += "  syncControls(value);\n";
   html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=brightness&brightness=' + value })\n";
   html += "    .then(response => response.text());\n";
   html += "}\n";
-  html += "// Update status every 10 seconds\n";
+  html += "function onSliderChange(value) { setBrightness(value); }\n";
+  html += "function onNumChange(value) { setBrightness(value); }\n";
+  html += "function calibratorOn() {\n";
+  html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=on' })\n";
+  html += "    .then(response => response.text())\n";
+  html += "    .then(data => { setTimeout(updateStatus, 500); setTimeout(function() { location.reload(); }, 1000); });\n";
+  html += "}\n";
+  html += "function calibratorOff() {\n";
+  html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=off' })\n";
+  html += "    .then(response => response.text())\n";
+  html += "    .then(data => { setTimeout(updateStatus, 500); setTimeout(function() { location.reload(); }, 1000); });\n";
+  html += "}\n";
   html += "setInterval(updateStatus, 10000);\n";
   html += "</script>\n";
   
@@ -289,8 +285,12 @@ inline String getCalibratorPage() {
   html += "</div>\n";
   html += "<div class='brightness-control'>\n";
   html += "<label for='brightness'>Brightness:</label>\n";
-  html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='setBrightness(this.value)'>\n";
-  html += "<div class='brightness-display center' id='brightnessValue'>" + String(getCurrentBrightness()) + "</div>\n";
+  html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' oninput='onSliderChange(this.value)'>\n";
+  html += "<div class='brightness-input center'>\n";
+  html += "<input type='number' id='brightnessNum' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='onNumChange(this.value)'>\n";
+  html += "<span>/ " + String(getMaxBrightness()) + "</span>\n";
+  html += "<button onclick='onNumChange(document.getElementById(\"brightnessNum\").value)'>Set</button>\n";
+  html += "</div>\n";
   html += "</div>\n";
   html += "<div class='button-row center'>\n";
   html += "<button onclick='calibratorOff()' class='button-danger'>Turn OFF</button>\n";
@@ -303,44 +303,35 @@ inline String getCalibratorPage() {
   
   // JavaScript for controls
   html += "<script>\n";
+  html += "function syncControls(value) {\n";
+  html += "  document.getElementById('brightness').value = value;\n";
+  html += "  document.getElementById('brightnessNum').value = value;\n";
+  html += "  var currentDisplay = document.querySelector('.brightness-display');\n";
+  html += "  if (currentDisplay) { currentDisplay.innerHTML = 'Current: ' + value + '/" + String(MAX_PWM_VALUE) + "'; }\n";
+  html += "}\n";
   html += "function updateDisplay() {\n";
   html += "  fetch('/api/v1/covercalibrator/0/brightness?ClientID=1&ClientTransactionID=1')\n";
   html += "    .then(response => response.json())\n";
-  html += "    .then(data => {\n";
-  html += "      if (data.ErrorNumber === 0) {\n";
-  html += "        const brightness = data.Value;\n";
-  html += "        document.getElementById('brightness').value = brightness;\n";
-  html += "        document.getElementById('brightnessValue').innerText = brightness;\n";
-  html += "        // Update the current brightness display\n";
-  html += "        const currentDisplay = document.querySelector('.brightness-display');\n";
-  html += "        if (currentDisplay) {\n";
-  html += "          currentDisplay.innerHTML = 'Current: ' + brightness + '/" + String(MAX_PWM_VALUE) + "';\n";
-  html += "        }\n";
-  html += "      }\n";
-  html += "    });\n";
+  html += "    .then(data => { if (data.ErrorNumber === 0) { syncControls(data.Value); } });\n";
   html += "}\n";
+  html += "function setBrightness(value) {\n";
+  html += "  value = Math.max(0, Math.min(" + String(getMaxBrightness()) + ", parseInt(value) || 0));\n";
+  html += "  syncControls(value);\n";
+  html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=brightness&brightness=' + value })\n";
+  html += "    .then(response => response.text());\n";
+  html += "}\n";
+  html += "function onSliderChange(value) { setBrightness(value); }\n";
+  html += "function onNumChange(value) { setBrightness(value); }\n";
   html += "function calibratorOn() {\n";
   html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=on' })\n";
   html += "    .then(response => response.text())\n";
-  html += "    .then(data => { updateDisplay(); setTimeout(() => location.reload(), 500); });\n";
+  html += "    .then(data => { updateDisplay(); setTimeout(function() { location.reload(); }, 500); });\n";
   html += "}\n";
   html += "function calibratorOff() {\n";
   html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=off' })\n";
   html += "    .then(response => response.text())\n";
-  html += "    .then(data => { updateDisplay(); setTimeout(() => location.reload(), 500); });\n";
+  html += "    .then(data => { updateDisplay(); setTimeout(function() { location.reload(); }, 500); });\n";
   html += "}\n";
-  html += "function setBrightness(value) {\n";
-  html += "  document.getElementById('brightness').value = value;\n";
-  html += "  document.getElementById('brightnessValue').innerText = value;\n";
-  html += "  // Update current brightness display immediately\n";
-  html += "  const currentDisplay = document.querySelector('.brightness-display');\n";
-  html += "  if (currentDisplay) {\n";
-  html += "    currentDisplay.innerHTML = 'Current: ' + value + '/" + String(MAX_PWM_VALUE) + "';\n";
-  html += "  }\n";
-  html += "  fetch('/calibrator', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=brightness&brightness=' + value })\n";
-  html += "    .then(response => response.text());\n";
-  html += "}\n";
-  html += "// Update display every 5 seconds\n";
   html += "setInterval(updateDisplay, 5000);\n";
   html += "</script>\n";
   

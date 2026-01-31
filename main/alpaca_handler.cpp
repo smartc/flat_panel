@@ -574,6 +574,10 @@ void handleCoverCalibratorSetup() {
   html += "button.danger:hover { background: #c0392b; }";
   html += "input[type=range] { width: 300px; margin: 10px; }";
   html += ".brightness-display { font-size: 18px; font-weight: bold; color: #2c3e50; }";
+  html += ".brightness-input { display: inline-flex; align-items: center; gap: 8px; margin: 10px 0; }";
+  html += ".brightness-input input[type=number] { width: 100px; padding: 8px; font-size: 18px; font-weight: bold; text-align: center; border: 1px solid #ddd; border-radius: 4px; }";
+  html += ".brightness-input span { font-size: 14px; color: #666; }";
+  html += ".brightness-input button { padding: 8px 12px; font-size: 14px; margin: 0; }";
   html += "</style></head>";
   html += "<body>";
   html += "<div class='container'>";
@@ -594,8 +598,12 @@ void handleCoverCalibratorSetup() {
   html += "<button onclick='calibratorOff()' class='danger'>Turn OFF</button>";
   html += "<br><br>";
   html += "<label for='brightness'>Set Brightness: </label>";
-  html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='setBrightness(this.value)'>";
-  html += "<div class='brightness-display' id='brightnessValue'>" + String(getCurrentBrightness()) + "</div>";
+  html += "<input type='range' id='brightness' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' oninput='onSliderChange(this.value)'>";
+  html += "<div class='brightness-input'>";
+  html += "<input type='number' id='brightnessNum' min='0' max='" + String(getMaxBrightness()) + "' value='" + String(getCurrentBrightness()) + "' onchange='onNumChange(this.value)'>";
+  html += "<span>/ " + String(getMaxBrightness()) + "</span>";
+  html += "<button onclick='onNumChange(document.getElementById(\"brightnessNum\").value)'>Set</button>";
+  html += "</div>";
   html += "</div>";
   
   html += "<div class='status'>";
@@ -609,28 +617,32 @@ void handleCoverCalibratorSetup() {
   
   // JavaScript for controls
   html += "<script>";
+  html += "function syncControls(value) {";
+  html += "  document.getElementById('brightness').value = value;";
+  html += "  document.getElementById('brightnessNum').value = value;";
+  html += "  document.getElementById('currentBrightness').innerText = value + '/" + String(MAX_PWM_VALUE) + "';";
+  html += "}";
   html += "function updateStatus() {";
   html += "  fetch('/api/v1/covercalibrator/0/calibratorstate?ClientID=1&ClientTransactionID=1')";
-  html += "    .then(r => r.json()).then(d => document.getElementById('state').innerText = d.Value == 1 ? 'Off' : d.Value == 3 ? 'Ready' : 'Unknown');";
+  html += "    .then(function(r) { return r.json(); }).then(function(d) { document.getElementById('state').innerText = d.Value == 1 ? 'Off' : d.Value == 3 ? 'Ready' : 'Unknown'; });";
   html += "  fetch('/api/v1/covercalibrator/0/brightness?ClientID=1&ClientTransactionID=1')";
-  html += "    .then(r => r.json()).then(d => {";
-  html += "      document.getElementById('currentBrightness').innerText = d.Value + '/" + String(MAX_PWM_VALUE) + "';";
-  html += "      document.getElementById('brightness').value = d.Value;";
-  html += "      document.getElementById('brightnessValue').innerText = d.Value;";
-  html += "    });";
+  html += "    .then(function(r) { return r.json(); }).then(function(d) { syncControls(d.Value); });";
   html += "}";
+  html += "function setBrightness(value) {";
+  html += "  value = Math.max(0, Math.min(" + String(getMaxBrightness()) + ", parseInt(value) || 0));";
+  html += "  syncControls(value);";
+  html += "  fetch('/api/v1/covercalibrator/0/calibratoron', {method: 'PUT', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'ClientID=1&ClientTransactionID=1&Brightness=' + value})";
+  html += "    .then(function() { setTimeout(updateStatus, 200); });";
+  html += "}";
+  html += "function onSliderChange(value) { setBrightness(value); }";
+  html += "function onNumChange(value) { setBrightness(value); }";
   html += "function calibratorOn() {";
   html += "  fetch('/api/v1/covercalibrator/0/calibratoron', {method: 'PUT', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'ClientID=1&ClientTransactionID=1'})";
-  html += "    .then(() => setTimeout(updateStatus, 200));";
+  html += "    .then(function() { setTimeout(updateStatus, 200); });";
   html += "}";
   html += "function calibratorOff() {";
   html += "  fetch('/api/v1/covercalibrator/0/calibratoroff', {method: 'PUT', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'ClientID=1&ClientTransactionID=1'})";
-  html += "    .then(() => setTimeout(updateStatus, 200));";
-  html += "}";
-  html += "function setBrightness(value) {";
-  html += "  document.getElementById('brightnessValue').innerText = value;";
-  html += "  fetch('/api/v1/covercalibrator/0/calibratoron', {method: 'PUT', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'ClientID=1&ClientTransactionID=1&Brightness=' + value})";
-  html += "    .then(() => setTimeout(updateStatus, 200));";
+  html += "    .then(function() { setTimeout(updateStatus, 200); });";
   html += "}";
   html += "setInterval(updateStatus, 2000);"; // Auto-refresh every 2 seconds
   html += "</script>";
